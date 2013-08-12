@@ -5,7 +5,7 @@ FB App to install app on multiple pages.
 
 <b>Features</b>
 
-<b>A : User :</b>
+<b>A : User </b>
 
 1 : User installs app <br />
 2 : After installation,manage forums <br />
