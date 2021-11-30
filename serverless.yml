@@ -1,0 +1,96 @@
+service: users
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev  #local,dev,prod
+  region: ap-south-1
+  logRetentionInDays: 14
+  environment:
+    ${file(../../${self:provider.stage}.environment.yml)}
+  versionFunctions: false
+  logs:
+    restApi: true
+
+package:
+ exclude:
+   - package.json
+   - package-lock.json
+
+
+custom:
+
+  documentation:
+    api:
+      info:
+        version: "v1.0"
+        title: "Emopin APIs"
+        description: "The REST API service to provider services for login, users, events, ratings."
+        contact:
+          name: "Emopin Technology"
+          email: "admin@emopin.com"
+    models:
+      - 
+        name: "UnauthorizedErrorResponse"
+        description: "The error response model in case of unauthorized api access"
+        contentType: "application/json"
+        schema: ${file(../../schemas/UnauthorizedErrorResponse.json)}
+
+      - 
+        name: "LoginRequestModel"
+        description: "The request model for login API"
+        contentType: "application/json"
+        schema: ${file(../../schemas/users/LoginRequestModel.json)}
+      - 
+        name: "LoginResponseModel"
+        description: "The response model for login API"
+        contentType: "application/json"
+        schema: ${file(../../schemas/users/LoginResponseModel.json)}
+
+  apiversion: v1
+
+functions:
+  apiLogin:
+    handler: handler.login
+    events:
+     - http:
+          path: api/${self:custom.apiversion}/login
+          method: POST
+          cors: true
+          #authorizer: arn:aws:lambda:us-east-2:406498607568:function:get-adminemails-prod-authorize
+          documentation:
+            summary: "To login a user with username ( mobile/email) or password."
+            description: "To login a user with username ( mobile/email) or password."
+            requestBody:
+              description: User email or phone and password of the user.
+            requestModels:
+              "application/json": "LoginRequestModel"            
+            methodResponses:
+              -
+                statusCode: "200"
+                responseBody:
+                  description: "Successfully Logged In."
+                responseHeaders:
+                  -
+                    name: "Content-Type"
+                    description: "Gives the content type returned in the response"
+                  -
+                    name: "Content-Length"
+                    description: "Indicates the size of the response body, in bytes"
+                  - 
+                    name: "Access-Control-Allow-Origin"
+                    description: "Specifies the URI that may access the response"
+                responseModels:
+                  "application/json": "LoginResponseModel"
+              -
+                statusCode: "400"
+                responseBody:
+                  description: "Thrown when any error comes in the processing of the incoming request"
+                responseModels:
+                  "application/json": "UnauthorizedErrorResponse"
+
+
+
+plugins:
+  - serverless-offline
+  - serverless-aws-documentation
