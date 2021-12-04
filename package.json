@@ -14,11 +14,9 @@
   "devDependencies": {
     "aws-sdk": "^2.934.0",
     "serverless": "^2.67.0",
-    "serverless-aws-documentation": "^1.1.0",
     "serverless-offline": "^8.2.0"
   },
   "dependencies": {
-    "jsonwebtoken": "^8.5.1",
-    "serverless-mysql": "^1.5.4"
+    "jsonwebtoken": "^8.5.1"
   }
 }

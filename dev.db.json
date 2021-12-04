@@ -1,6 +1,6 @@
 {
-	"HOST": "localhost",
-	"DATABASE": "local",
-	"USERNAME": "root",
-	"PASSWORD": "root"
+	"MONGODB_URI": "mongodb://emopinadmin:yz74g94bra@3.109.94.254:27017/emopin",
+	"MONGODB_NAME": "emopin"
 }
+
+

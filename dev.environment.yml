@@ -5,7 +5,5 @@ AWS_REG: ${self:provider.region}
 ACCOUNT_ID: 109563118176
 DOMAIN_NAME: emopin.com
 FROM_EMAIL: admin@emopin.com
-MYSQL_HOST: ${file(../../${self:provider.stage}.db.json):HOST}
-MYSQL_DATABASE: ${file(../../${self:provider.stage}.db.json):DATABASE}
-MYSQL_USER: ${file(../../${self:provider.stage}.db.json):USERNAME}
-MYSQL_PASSWORD: ${file(../../${self:provider.stage}.db.json):PASSWORD}
+MONGODB_URI: ${file(../../${self:provider.stage}.db.json):MONGODB_URI}
+MONGODB_NAME: ${file(../../${self:provider.stage}.db.json):MONGODB_NAME}

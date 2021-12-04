@@ -1,61 +1,44 @@
 'use strict';
-const {apiResponse} = require('./common/utility.js');
-const dbutils = require('./common/db.js');
+const {apiResponse, apiResponseWithValidationErrors} = require('./common/utility.js');
+const RESPONSE_MESSAGES = require('./common/constant.message.js').RESPONSE_MESSAGES;
+const mongoDBUtils = require('./common/mongodb.js');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const Ajv = require('ajv');
+const ajv = new Ajv({ allErrors: true});
+let userSchema = require('./schema/user.schema.js').schema;
 
 
-// POST - https://z8vdmqeq0i.execute-api.ap-south-1.amazonaws.com/dev/api/v1/login
-async function login(event, context, callback) {
+exports.login = async (event, context) => {
 		try {
-			//context.callbackWaitsForEmptyEventLoop = false;
 			console.log("Inside login: POST");
-			let {username,password} = JSON.parse(event.body);
-			password = crypto.createHash('md5').update(password).digest('hex');
-			const recordExists  = await dbutils.getData('users', ' id,username,full_name ', ['username','password','is_active'], 
-										[username.trim(), password.trim(),1]);
-			if(recordExists.length){
-				const secret = process.env.JWT_SECRET;
-				const user = recordExists[0];
-				const token = jwt.sign({user} , process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION_TIME });
-				Object.assign(recordExists[0], {token:token}); //recordExists overwrite ( target )
-				return apiResponse(1,"success",200,[recordExists[0]]);
+			let eventBody = JSON.parse(event.body);
+			userSchema["required"] = ["username", "password"]; //for login username, password is required
+			const inputValidator = ajv.compile(userSchema);
+			const validationResult = inputValidator(eventBody);
+			if (!validationResult) {
+				return apiResponseWithValidationErrors(1, inputValidator.errors);
+			}
+			eventBody.password = crypto.createHash('md5').update(eventBody.password.trim()).digest('hex');
+			const user = mongoDBUtils.findOne("users", { username : eventBody.username.trim(), password : eventBody.password },
+								{ projection: { _id: 1, username: 1, full_name: 1, email: 1, country_code: 1, mobile_no: 1,  email: 1,
+								 created_at: 1, last_modified_at: 1 } });
+			if(user.length){ //is_otp_verified: 1, status: 'ACTIVE'
+				if(user.is_otp_verified === 1 && user.status === 'ACTIVE'){
+					const token = jwt.sign(user , process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION_TIME });
+					Object.assign(user, {token:token});
+					return apiResponse(1, RESPONSE_MESSAGES.LOGIN_SUCCESS, 200, [user]);
+				}else if(user.is_otp_verified === 0){
+					return apiResponse(1, RESPONSE_MESSAGES.USER_OTP_NOT_VERIFIED, 200, []);
+				}else if(user.status !== 'ACTIVE'){
+					return apiResponse(1, RESPONSE_MESSAGES.USER_NOT_ACTIVE, 200, []);
+				}
 			}else{
-				return apiResponse(0,"User does not exist or Password incorrect.",401);
+				return apiResponse(1, RESPONSE_MESSAGES.USER_NOT_FOUND, 200, []);
 			}
 		} catch (err) {
-			console.log("error: login", err.message	);
-			return apiResponse(1,err.message,401);
+			console.log("Error: login", err.message	);
+			return apiResponse(0, err.message, 401);
 		}
 }
 
-
-async function refreshToken(event, context, callback) {
-		try {
-			//context.callbackWaitsForEmptyEventLoop = false;
-			console.log("Inside refreshToken: POST");
-			const {user_id} = JSON.parse(event.body);
-			const recordExists  = await dbutils.getData('users', ' id,username,full_name ', ['id'], 
-										[user_id]);
-			if(recordExists.length){
-				const secret = process.env.JWT_SECRET;
-				const user = recordExists[0];
-				const token = jwt.sign({user} , process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION_TIME });
-				Object.assign(recordExists[0], {token:token}); //recordExists overwrite ( target )
-				return apiResponse(1,"success",200,[recordExists[0]]);
-			}else{
-				return apiResponse(0,"Can't refresh token.",404);
-			}
-
-		} catch (err) {
-			console.log("Error: updateTemplates", err.message);
-			return apiResponse(0,err.message,200);
-		}
-}
-
-
-
-module.exports = {
-	login, 
-	refreshToken
-};
